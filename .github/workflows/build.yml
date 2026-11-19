@@ -34,27 +34,31 @@ jobs:
           cp "$RUNNER_TEMP/forge-mdk/gradlew" .
           chmod +x gradlew
 
-      - name: Apply Alpha 0.2.0 files from repository root
+      - name: Apply Alpha 0.3.0 source files from repository root
         run: |
-          for name in EclipseCommands EclipseEvents SpellCasting WardData MagicInteractions; do
-            cp "../${name}.java" "src/main/java/io/github/eclipsegrimoire/${name}.java"
-          done
-          for name in ClientEvents GrimoireScreen; do
-            cp "../${name}.java" "src/main/java/io/github/eclipsegrimoire/client/${name}.java"
+          for java_file in ../*.java; do
+            name="${java_file##*/}"
+            case "$name" in
+              ClientEvents.java|GrimoireScreen.java|ClientBook.java)
+                cp "$java_file" "src/main/java/io/github/eclipsegrimoire/client/$name" ;;
+              *)
+                cp "$java_file" "src/main/java/io/github/eclipsegrimoire/$name" ;;
+            esac
           done
           cp ../build.gradle ./build.gradle
           cp ../gradle.properties ./gradle.properties
-          # Prevent a successful build of the wrong, older version.
-          grep -q 'mod_version=0.2.0-alpha' gradle.properties
-          grep -q 'case "circle"' src/main/java/io/github/eclipsegrimoire/SpellCasting.java
-          test -f src/main/java/io/github/eclipsegrimoire/WardData.java
+          grep -q 'mod_version=0.3.0-alpha' gradle.properties
+          grep -q 'case "shatter"' src/main/java/io/github/eclipsegrimoire/SpellCasting.java
+          grep -q 'EclipseNetwork' src/main/java/io/github/eclipsegrimoire/EclipseMod.java
+          test -f src/main/java/io/github/eclipsegrimoire/EclipseNetwork.java
+          test -f src/main/java/io/github/eclipsegrimoire/client/ClientBook.java
 
-      - name: Compile Alpha 0.2.0 Forge mod
+      - name: Compile Alpha 0.3.0 Forge mod
         run: ./gradlew --no-daemon build
 
       - name: Upload compiled mod (only if build succeeds)
         uses: actions/upload-artifact@v4
         with:
-          name: eclipse-grimoire-forge-1.20.1-alpha-0.2.0
+          name: eclipse-grimoire-forge-1.20.1-alpha-0.3.0
           path: eclipse_grimoire_safe_build/build/libs/*.jar
           if-no-files-found: error
