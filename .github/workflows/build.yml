@@ -19,12 +19,12 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Java 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Get official Forge MDK Gradle wrapper
+      - name: Download official Forge MDK Gradle wrapper
         run: |
           curl --fail --location --retry 3 --output "$RUNNER_TEMP/forge-mdk.zip" \
             https://maven.minecraftforge.net/net/minecraftforge/forge/1.20.1-47.4.0/forge-1.20.1-47.4.0-mdk.zip
@@ -34,17 +34,27 @@ jobs:
           cp "$RUNNER_TEMP/forge-mdk/gradlew" .
           chmod +x gradlew
 
-      - name: Remove invalid plugin line from the uploaded alpha template
+      - name: Apply Alpha 0.2.0 files from repository root
         run: |
-          # Temporary correction in the runner; does not edit files in your GitHub repo.
-          sed -i "/^[[:space:]]*id 'eclipse'[[:space:]]*$/d" build.gradle
+          for name in EclipseCommands EclipseEvents SpellCasting WardData MagicInteractions; do
+            cp "../${name}.java" "src/main/java/io/github/eclipsegrimoire/${name}.java"
+          done
+          for name in ClientEvents GrimoireScreen; do
+            cp "../${name}.java" "src/main/java/io/github/eclipsegrimoire/client/${name}.java"
+          done
+          cp ../build.gradle ./build.gradle
+          cp ../gradle.properties ./gradle.properties
+          # Prevent a successful build of the wrong, older version.
+          grep -q 'mod_version=0.2.0-alpha' gradle.properties
+          grep -q 'case "circle"' src/main/java/io/github/eclipsegrimoire/SpellCasting.java
+          test -f src/main/java/io/github/eclipsegrimoire/WardData.java
 
-      - name: Compile and package Forge mod
+      - name: Compile Alpha 0.2.0 Forge mod
         run: ./gradlew --no-daemon build
 
-      - name: Upload compiled jar (only if build succeeds)
+      - name: Upload compiled mod (only if build succeeds)
         uses: actions/upload-artifact@v4
         with:
-          name: eclipse-grimoire-forge-1.20.1-alpha
+          name: eclipse-grimoire-forge-1.20.1-alpha-0.2.0
           path: eclipse_grimoire_safe_build/build/libs/*.jar
           if-no-files-found: error
