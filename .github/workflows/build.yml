@@ -34,7 +34,7 @@ jobs:
           cp "$RUNNER_TEMP/forge-mdk/gradlew" .
           chmod +x gradlew
 
-      - name: Apply the uploaded Alpha 0.3.0 ZIP to Forge source tree
+      - name: Apply Alpha 0.3.0 ZIP and correct Forge network API
         run: |
           set -euo pipefail
           zip_file="../The_Eclipse_Grimoire_GitHub_Root_Update_0.3.0.zip"
@@ -60,6 +60,10 @@ jobs:
                 cp -v "$java_file" "src/main/java/io/github/eclipsegrimoire/$name" ;;
             esac
           done
+          # Forge 47.4.0 expects a Supplier<ServerPlayer> for PLAYER.with(...).
+          network="src/main/java/io/github/eclipsegrimoire/EclipseNetwork.java"
+          sed -i 's/PacketDistributor\.PLAYER\.with(player)/PacketDistributor.PLAYER.with(() -> player)/' "$network"
+          grep -Fq 'PacketDistributor.PLAYER.with(() -> player)' "$network"
           cp "$src/build.gradle" ./build.gradle
           cp "$src/gradle.properties" ./gradle.properties
           grep -q '^mod_version=0.3.0-alpha$' gradle.properties
