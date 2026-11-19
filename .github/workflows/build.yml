@@ -1,0 +1,50 @@
+name: Build The Eclipse Grimoire (Forge 1.20.1)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: eclipse_grimoire_safe_build
+    steps:
+      - name: Check out mod sources
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Get official Forge MDK Gradle wrapper
+        run: |
+          curl --fail --location --retry 3 --output "$RUNNER_TEMP/forge-mdk.zip" \
+            https://maven.minecraftforge.net/net/minecraftforge/forge/1.20.1-47.4.0/forge-1.20.1-47.4.0-mdk.zip
+          mkdir -p "$RUNNER_TEMP/forge-mdk"
+          unzip -q "$RUNNER_TEMP/forge-mdk.zip" 'gradlew' 'gradle/wrapper/*' -d "$RUNNER_TEMP/forge-mdk"
+          cp -R "$RUNNER_TEMP/forge-mdk/gradle" .
+          cp "$RUNNER_TEMP/forge-mdk/gradlew" .
+          chmod +x gradlew
+
+      - name: Remove invalid plugin line from the uploaded alpha template
+        run: |
+          # Temporary correction in the runner; does not edit files in your GitHub repo.
+          sed -i "/^[[:space:]]*id 'eclipse'[[:space:]]*$/d" build.gradle
+
+      - name: Compile and package Forge mod
+        run: ./gradlew --no-daemon build
+
+      - name: Upload compiled jar (only if build succeeds)
+        uses: actions/upload-artifact@v4
+        with:
+          name: eclipse-grimoire-forge-1.20.1-alpha
+          path: eclipse_grimoire_safe_build/build/libs/*.jar
+          if-no-files-found: error
