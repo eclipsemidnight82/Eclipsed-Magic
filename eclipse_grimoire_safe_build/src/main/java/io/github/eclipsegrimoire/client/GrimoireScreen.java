@@ -70,7 +70,7 @@ public final class GrimoireScreen extends Screen {
     private void close() {Minecraft.getInstance().setScreen(null);}
     private void switchPage(Page p) {page=p;clearWidgets();init();}
     @Override public void render(GuiGraphics g,int mx,int my,float partial) {
-        renderBackground(g,mx,my,partial);
+        renderBackground(g);
         int x=width/2-155,y=height/2-104;
         g.fill(x,y,x+310,y+211,0xff141019);
         g.fill(x+5,y+5,x+305,y+206,0xff231b2c);
