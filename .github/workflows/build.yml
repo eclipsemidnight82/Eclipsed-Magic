@@ -34,24 +34,40 @@ jobs:
           cp "$RUNNER_TEMP/forge-mdk/gradlew" .
           chmod +x gradlew
 
-      - name: Apply Alpha 0.3.0 source files from repository root
+      - name: Apply the uploaded Alpha 0.3.0 ZIP to Forge source tree
         run: |
-          for java_file in ../*.java; do
+          set -euo pipefail
+          zip_file="../The_Eclipse_Grimoire_GitHub_Root_Update_0.3.0.zip"
+          if [[ ! -f "$zip_file" ]]; then
+            echo "Missing Alpha 0.3.0 ZIP at repository root: $zip_file" >&2
+            exit 1
+          fi
+          src="$RUNNER_TEMP/eclipse-alpha-0.3.0"
+          mkdir -p "$src"
+          unzip -q "$zip_file" -d "$src"
+          test -f "$src/EclipseMod.java"
+          test -f "$src/EclipseNetwork.java"
+          test -f "$src/ClientBook.java"
+          test -f "$src/SpellCasting.java"
+          test -f "$src/build.gradle"
+          test -f "$src/gradle.properties"
+          for java_file in "$src"/*.java; do
             name="${java_file##*/}"
             case "$name" in
               ClientEvents.java|GrimoireScreen.java|ClientBook.java)
-                cp "$java_file" "src/main/java/io/github/eclipsegrimoire/client/$name" ;;
+                cp -v "$java_file" "src/main/java/io/github/eclipsegrimoire/client/$name" ;;
               *)
-                cp "$java_file" "src/main/java/io/github/eclipsegrimoire/$name" ;;
+                cp -v "$java_file" "src/main/java/io/github/eclipsegrimoire/$name" ;;
             esac
           done
-          cp ../build.gradle ./build.gradle
-          cp ../gradle.properties ./gradle.properties
-          grep -q 'mod_version=0.3.0-alpha' gradle.properties
+          cp "$src/build.gradle" ./build.gradle
+          cp "$src/gradle.properties" ./gradle.properties
+          grep -q '^mod_version=0.3.0-alpha$' gradle.properties
           grep -q 'case "shatter"' src/main/java/io/github/eclipsegrimoire/SpellCasting.java
           grep -q 'EclipseNetwork' src/main/java/io/github/eclipsegrimoire/EclipseMod.java
           test -f src/main/java/io/github/eclipsegrimoire/EclipseNetwork.java
           test -f src/main/java/io/github/eclipsegrimoire/client/ClientBook.java
+          echo "Confirmed: Alpha 0.3.0 files have replaced old source in Forge build directory."
 
       - name: Compile Alpha 0.3.0 Forge mod
         run: ./gradlew --no-daemon build
