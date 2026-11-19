@@ -1,0 +1,11 @@
+If Windows blocked the old BUILD_WINDOWS.bat:
+
+1) Delete the old, uncompiled Eclipse Grimoire source ZIP/folder from the Minecraft mods folder.
+2) Extract THIS ZIP into a normal folder outside Minecraft, e.g. Desktop\EclipseGrimoire.
+3) Open the BUILD_WINDOWS.bat in Notepad to inspect it.
+4) This revised batch file does not use the previous PowerShell -ExecutionPolicy Bypass option.
+5) If Windows Security quarantines the file, do NOT turn off antivirus/security protections. Instead use the manual Forge build method in README.md or ask for help with the exact warning.
+6) If Windows allows launching it, it downloads official Forge 1.20.1 MDK, then runs Gradle, which downloads its build dependencies. It requires Java 17 and internet access.
+7) Only if a build succeeds, look for dist\eclipse_grimoire-0.1.0-alpha.jar. Test it on a copied Minecraft profile/world before uploading anywhere.
+
+Important: source project has NOT been compiled/verified here. This zip is NOT an upload-ready .jar.
