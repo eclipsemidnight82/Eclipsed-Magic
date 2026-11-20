@@ -15,7 +15,7 @@ jobs:
       run:
         working-directory: eclipse_grimoire_safe_build
     steps:
-      - name: Check out source repository
+      - name: Check out repository
         uses: actions/checkout@v4
 
       - name: Set up Java 17
@@ -34,26 +34,29 @@ jobs:
           cp "$RUNNER_TEMP/forge-mdk/gradlew" .
           chmod +x gradlew
 
-      - name: Apply Alpha 0.5.0 source ZIP
+      - name: Apply and verify Alpha 0.6.0 update ZIP
         run: |
           set -euo pipefail
-          zip_file="../The_Eclipse_Grimoire_GitHub_Update_0.5.0.zip"
-          test -f "$zip_file" || { echo "Missing update ZIP in repository root: $zip_file" >&2; exit 1; }
+          zip_file="../The_Eclipse_Grimoire_GitHub_Update_0.6.0.zip"
+          test -f "$zip_file" || { echo "Missing 0.6.0 ZIP at repository root: $zip_file" >&2; exit 1; }
           unzip -o -q "$zip_file" -d .
-          grep -q '^mod_version=0.5.0-alpha$' gradle.properties
-          test -f src/main/java/io/github/eclipsegrimoire/TetherMagic.java
-          grep -q '"tether".equals(spell)' src/main/java/io/github/eclipsegrimoire/SpellCasting.java
-          grep -q '"tether","Arcane Tether"' src/main/java/io/github/eclipsegrimoire/client/SpellWheel.java
-          grep -q 'class ArcaneButton extends Button' src/main/java/io/github/eclipsegrimoire/client/GrimoireScreen.java
+          grep -q '^mod_version=0.6.0-alpha$' gradle.properties
+          test -f src/main/java/io/github/eclipsegrimoire/MotionMagic.java
+          test -f src/main/java/io/github/eclipsegrimoire/ArcaneEffects.java
+          test -f src/main/java/io/github/eclipsegrimoire/client/WheelPreferences.java
+          grep -Fq 'MotionMagic.cast(player,spell)' src/main/java/io/github/eclipsegrimoire/SpellCasting.java
+          grep -Fq 'case "pulse"' src/main/java/io/github/eclipsegrimoire/MagicData.java
+          grep -Fq 'RESET WHEEL TO DEFAULT' src/main/java/io/github/eclipsegrimoire/client/GrimoireScreen.java
+          grep -Fq 'new Entry("witchfire"' src/main/java/io/github/eclipsegrimoire/client/SpellWheel.java
           test -f src/main/resources/assets/eclipse_grimoire/textures/block/infused_salt_purple.png
-          echo "Verified: Alpha 0.5.0 source with styled grimoire and Arcane Tether"
+          echo "Verified: compiling Alpha 0.6.0 magic, wheel preferences and color-themed book."
 
-      - name: Compile Alpha 0.5.0 Forge mod
+      - name: Compile Alpha 0.6.0 Forge mod
         run: ./gradlew --no-daemon build
 
-      - name: Upload compiled mod if build succeeds
+      - name: Upload compiled mod (only on success)
         uses: actions/upload-artifact@v4
         with:
-          name: eclipse-grimoire-forge-1.20.1-alpha-0.5.0
+          name: eclipse-grimoire-forge-1.20.1-alpha-0.6.0
           path: eclipse_grimoire_safe_build/build/libs/*.jar
           if-no-files-found: error
