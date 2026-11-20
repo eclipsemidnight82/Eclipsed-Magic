@@ -26,6 +26,7 @@ jobs:
 
       - name: Download official Forge MDK Gradle wrapper
         run: |
+          set -euo pipefail
           curl --fail --location --retry 3 --output "$RUNNER_TEMP/forge-mdk.zip" \
             https://maven.minecraftforge.net/net/minecraftforge/forge/1.20.1-47.4.0/forge-1.20.1-47.4.0-mdk.zip
           mkdir -p "$RUNNER_TEMP/forge-mdk"
@@ -34,48 +35,36 @@ jobs:
           cp "$RUNNER_TEMP/forge-mdk/gradlew" .
           chmod +x gradlew
 
-      - name: Apply Alpha 0.7.1 source update
+      - name: Apply Alpha 0.7.2 source update
         run: |
           set -euo pipefail
-          archive="../The_Eclipse_Grimoire_GitHub_Update_0.7.1.zip"
+          archive="../The_Eclipse_Grimoire_GitHub_Update_0.7.2.zip"
           if [[ ! -f "$archive" ]]; then
-            echo "Missing Alpha 0.7.1 ZIP in repository root: $archive" >&2
+            echo "Upload the Alpha 0.7.2 ZIP to the repository root." >&2
             exit 1
           fi
           unzip -tq "$archive"
           unzip -o -q "$archive" -d .
-          grep -Fxq 'mod_version=0.7.1-alpha' gradle.properties || { echo '0.7.1 version was not applied' >&2; exit 1; }
-          for source in EclipseEvents WardData MagicInteractions MotionMagic SpellCasting EclipseNetwork ArcaneEffects; do
-            test -s "src/main/java/io/github/eclipsegrimoire/${source}.java" || { echo "Missing $source" >&2; exit 1; }
+          grep -Fxq 'mod_version=0.7.2-alpha' gradle.properties || { echo 'Wrong mod version; refusing to build stale sources' >&2; exit 1; }
+          # Check actual structure and identifiers, not fragile exact switch-case formatting.
+          for source in SpellCasting MagicData WardData EclipseCommands EclipseNetwork; do
+            test -s "src/main/java/io/github/eclipsegrimoire/${source}.java" || exit 1
           done
-          for source in ArcaneRender SpellWheel WheelPreferences GrimoireScreen; do
-            test -s "src/main/java/io/github/eclipsegrimoire/client/${source}.java" || { echo "Missing $source" >&2; exit 1; }
+          for source in GrimoireScreen SpellWheel WheelPreferences ArcaneRender; do
+            test -s "src/main/java/io/github/eclipsegrimoire/client/${source}.java" || exit 1
           done
-          test -s src/main/resources/assets/eclipse_grimoire/textures/block/infused_salt_purple.png
-          echo 'Alpha 0.7.1 source, door seals, visuals and compact spell wheel found.'
+          grep -Fq 'new SpellDef("Absolute Seal","absolute"' src/main/java/io/github/eclipsegrimoire/client/GrimoireScreen.java
+          grep -Fq 'new Entry("absolute","Absolute Seal"' src/main/java/io/github/eclipsegrimoire/client/SpellWheel.java
+          grep -Fq 'bookScale()' src/main/java/io/github/eclipsegrimoire/client/GrimoireScreen.java
+          grep -Fq 'v.vertex(matrix.pose(),' src/main/java/io/github/eclipsegrimoire/client/ArcaneRender.java
+          echo 'Confirmed: Alpha 0.7.2 installed; named Absolute Seal and responsive book are present.'
 
-      - name: Fix Forge 1.20.1 lightning vertex API
-        run: |
-          set -euo pipefail
-          python3 - <<'PYFIX'
-          from pathlib import Path
-          file = Path('src/main/java/io/github/eclipsegrimoire/client/ArcaneRender.java')
-          text = file.read_text(encoding='utf-8')
-          old = 'v.vertex(matrix,(float)p.x,(float)p.y,(float)p.z)'
-          new = 'v.vertex(matrix.pose(),(float)p.x,(float)p.y,(float)p.z)'
-          if text.count(old) != 1:
-              raise SystemExit('Expected exactly one pre-fix vertex call; inspect ArcaneRender.java')
-          file.write_text(text.replace(old, new), encoding='utf-8')
-          print('Corrected ArcaneRender.java: PoseStack.Pose -> Matrix4f')
-          PYFIX
-          grep -Fq 'v.vertex(matrix.pose(),(float)p.x,(float)p.y,(float)p.z)' src/main/java/io/github/eclipsegrimoire/client/ArcaneRender.java
-
-      - name: Compile Alpha 0.7.1 Forge mod
+      - name: Compile Alpha 0.7.2 Forge mod
         run: ./gradlew --no-daemon build
 
-      - name: Upload compiled mod only on success
+      - name: Upload compiled Alpha 0.7.2 mod
         uses: actions/upload-artifact@v4
         with:
-          name: eclipse-grimoire-forge-1.20.1-alpha-0.7.1
+          name: eclipse-grimoire-forge-1.20.1-alpha-0.7.2
           path: eclipse_grimoire_safe_build/build/libs/*.jar
           if-no-files-found: error
