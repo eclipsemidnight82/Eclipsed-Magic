@@ -38,7 +38,7 @@ jobs:
       - name: Apply and verify Alpha 0.11.3 Arcane Aesthetic source
         run: |
           set -euo pipefail
-          archive="../The_Eclipse_Grimoire_GitHub_Update_0.11.3.zip"
+          archive="../The_Eclipse_Grimoire_GitHub_Update_0.11.3_FIXED.zip"
           test -s "$archive" || { echo 'Missing Alpha 0.11.3 source ZIP in repository root' >&2; exit 1; }
           unzip -tq "$archive"
           unzip -o -q "$archive" -d .
@@ -52,6 +52,7 @@ jobs:
           grep -Fq 'poppet_state' src/main/java/io/github/eclipsegrimoire/client/BloodTaglockModel.java
           grep -Fq 'super(id,category)' src/main/java/io/github/eclipsegrimoire/BloodPoppetRecipe.java
           grep -Fq 'super(id,category)' src/main/java/io/github/eclipsegrimoire/WardPoppetRecipe.java
+          test "$(grep -c 'void appendHoverText(' src/main/java/io/github/eclipsegrimoire/PoppetItem.java)" -eq 1 || { echo 'Poppet tooltip method duplicated' >&2; exit 1; }
           test -s src/main/resources/assets/eclipse_grimoire/textures/item/blood_taglock_blood.png
           test -s src/main/resources/assets/eclipse_grimoire/textures/item/poppet_protected.png
           test -s src/main/resources/assets/eclipse_grimoire/models/block/blood_chalice_blood.json
