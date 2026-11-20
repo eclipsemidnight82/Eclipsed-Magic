@@ -35,36 +35,37 @@ jobs:
           cp "$RUNNER_TEMP/forge-mdk/gradlew" .
           chmod +x gradlew
 
-      - name: Apply Alpha 0.7.2 source update
+      - name: Apply Alpha 0.8.0 source update
         run: |
           set -euo pipefail
-          archive="../The_Eclipse_Grimoire_GitHub_Update_0.7.2.zip"
-          if [[ ! -f "$archive" ]]; then
-            echo "Upload the Alpha 0.7.2 ZIP to the repository root." >&2
+          archive="../The_Eclipse_Grimoire_GitHub_Update_0.8.0.zip"
+          if [[ ! -s "$archive" ]]; then
+            echo "Missing Alpha 0.8.0 ZIP at the repository root: $archive" >&2
             exit 1
           fi
           unzip -tq "$archive"
           unzip -o -q "$archive" -d .
-          grep -Fxq 'mod_version=0.7.2-alpha' gradle.properties || { echo 'Wrong mod version; refusing to build stale sources' >&2; exit 1; }
-          # Check actual structure and identifiers, not fragile exact switch-case formatting.
-          for source in SpellCasting MagicData WardData EclipseCommands EclipseNetwork; do
-            test -s "src/main/java/io/github/eclipsegrimoire/${source}.java" || exit 1
+          grep -Fxq 'mod_version=0.8.0-alpha' gradle.properties || { echo 'Refusing to build older sources' >&2; exit 1; }
+          for source in EclipseMod MagicDecorBlock WitchcraftData WitchcraftEvents WitchcraftSpells WitchChalkItem FamiliarCharmItem ManaDraughtItem MagicData SpellCasting EclipseEvents; do
+            test -s "src/main/java/io/github/eclipsegrimoire/${source}.java" || { echo "Missing $source" >&2; exit 1; }
           done
-          for source in GrimoireScreen SpellWheel WheelPreferences ArcaneRender; do
-            test -s "src/main/java/io/github/eclipsegrimoire/client/${source}.java" || exit 1
+          for source in GrimoireScreen SpellWheel WheelPreferences; do
+            test -s "src/main/java/io/github/eclipsegrimoire/client/${source}.java" || { echo "Missing $source" >&2; exit 1; }
           done
-          grep -Fq 'new SpellDef("Absolute Seal","absolute"' src/main/java/io/github/eclipsegrimoire/client/GrimoireScreen.java
-          grep -Fq 'new Entry("absolute","Absolute Seal"' src/main/java/io/github/eclipsegrimoire/client/SpellWheel.java
-          grep -Fq 'bookScale()' src/main/java/io/github/eclipsegrimoire/client/GrimoireScreen.java
-          grep -Fq 'v.vertex(matrix.pose(),' src/main/java/io/github/eclipsegrimoire/client/ArcaneRender.java
-          echo 'Confirmed: Alpha 0.7.2 installed; named Absolute Seal and responsive book are present.'
+          grep -Fq 'WITCHCRAFT_TAB' src/main/java/io/github/eclipsegrimoire/EclipseMod.java
+          grep -Fq 'new SpellDef("Witchlight","witchlight"' src/main/java/io/github/eclipsegrimoire/client/GrimoireScreen.java
+          grep -Fq 'new Entry("dispel","Dispel"' src/main/java/io/github/eclipsegrimoire/client/SpellWheel.java
+          test -s src/main/resources/assets/eclipse_grimoire/models/block/witch_brazier_purple.json
+          test -s src/main/resources/assets/eclipse_grimoire/textures/item/mana_draught.png
+          test -s src/main/resources/data/eclipse_grimoire/recipes/wardstone.json
+          echo 'Alpha 0.8.0 witchcraft source, creative tab, assets and recipes verified.'
 
-      - name: Compile Alpha 0.7.2 Forge mod
+      - name: Compile Alpha 0.8.0 Forge mod
         run: ./gradlew --no-daemon build
 
-      - name: Upload compiled Alpha 0.7.2 mod
+      - name: Upload compiled Alpha 0.8.0 mod
         uses: actions/upload-artifact@v4
         with:
-          name: eclipse-grimoire-forge-1.20.1-alpha-0.7.2
+          name: eclipse-grimoire-forge-1.20.1-alpha-0.8.0
           path: eclipse_grimoire_safe_build/build/libs/*.jar
           if-no-files-found: error
