@@ -35,14 +35,14 @@ jobs:
           cp "$RUNNER_TEMP/forge-mdk/gradlew" .
           chmod +x gradlew
 
-      - name: Apply and verify Alpha 0.11.4 Visual Consistency source
+      - name: Apply and verify Alpha 0.11.5 Taglock Model Consistency source
         run: |
           set -euo pipefail
-          archive="../The_Eclipse_Grimoire_GitHub_Update_0.11.4.zip"
-          test -s "$archive" || { echo 'Missing Alpha 0.11.4 source ZIP in repository root' >&2; exit 1; }
+          archive="../The_Eclipse_Grimoire_GitHub_Update_0.11.5.zip"
+          test -s "$archive" || { echo 'Missing Alpha 0.11.5 source ZIP in repository root' >&2; exit 1; }
           unzip -tq "$archive"
           unzip -o -q "$archive" -d .
-          grep -Fxq 'mod_version=0.11.4-alpha' gradle.properties || { echo 'Wrong version: refusing stale build' >&2; exit 1; }
+          grep -Fxq 'mod_version=0.11.5-alpha' gradle.properties || { echo 'Wrong version: refusing stale build' >&2; exit 1; }
           for source in EclipseMod EclipseNetwork ScryingMagic ScryingCrystalBlock BloodChaliceBlock BloodRelicsData BloodImmortality BloodPoppetRecipe WardPoppetRecipe TaglockItem PoppetItem MagicData EclipseCommands; do
             test -s "src/main/java/io/github/eclipsegrimoire/${source}.java" || { echo "Missing ${source}" >&2; exit 1; }
           done
@@ -69,7 +69,7 @@ jobs:
           for name in ('blood_chalice_empty','blood_chalice_blood'):
               model=json.loads((assets/'models/block'/f'{name}.json').read_text())
               assert len(model.get('elements',[]))>=15
-          for name in ('blood_taglock','poppet'):
+          for name in ('taglock','poppet'):
               model=json.loads((assets/'models/item'/f'{name}.json').read_text())
               assert model.get('overrides')
           print('Validated',len(files),'JSON resources, translucent crystal, filled chalice, dynamic icon models')
@@ -91,14 +91,39 @@ jobs:
           print('Verified bell texture references and consistent taglock artwork')
           PYVISUAL
 
-          echo 'Alpha 0.11.4 Visual Consistency sources and resources verified.'
+          python3 - <<'PYTAGLOCK'
+          import json, pathlib, struct
+          base=pathlib.Path('src/main/resources/assets/eclipse_grimoire')
+          modeldir=base/'models/item'
+          texdir=base/'textures/item'
+          active=json.loads((modeldir/'taglock.json').read_text())
+          empty=json.loads((modeldir/'blood_taglock.json').read_text())
+          filled=json.loads((modeldir/'blood_taglock_full.json').read_text())
+          assert active['parent']=='minecraft:item/generated'
+          assert active['textures']['layer0']=='eclipse_grimoire:item/blood_taglock', 'Registered empty taglock must point directly to the new empty sprite'
+          assert len(active['overrides'])==1
+          override=active['overrides'][0]
+          assert override['predicate']=={'eclipse_grimoire:blood':1.0}
+          assert override['model']=='eclipse_grimoire:item/blood_taglock_full', 'Filled taglock must be selected in one step, without nested overrides'
+          assert 'overrides' not in empty, 'No nested blood overrides allowed'
+          assert filled['textures']['layer0']=='eclipse_grimoire:item/blood_taglock_blood'
+          def png_dims(path):
+              data=path.read_bytes()
+              assert data[:8]==b'\x89PNG\r\n\x1a\n', path
+              return struct.unpack('>II', data[16:24])
+          assert png_dims(texdir/'blood_taglock.png')==png_dims(texdir/'blood_taglock_blood.png')==(32,32)
+          assert (texdir/'taglock.png').read_bytes()==(texdir/'blood_taglock.png').read_bytes(), 'Legacy alias must match the new empty model'
+          print('Taglock direct empty/full texture selection verified; old cylinder is not referenced')
+          PYTAGLOCK
 
-      - name: Compile Alpha 0.11.4 Forge mod
+          echo 'Alpha 0.11.5 Taglock Model Consistency sources and resources verified.'
+
+      - name: Compile Alpha 0.11.5 Forge mod
         run: ./gradlew --no-daemon build
 
-      - name: Upload compiled Alpha 0.11.4 JAR
+      - name: Upload compiled Alpha 0.11.5 JAR
         uses: actions/upload-artifact@v4
         with:
-          name: eclipse-grimoire-forge-1.20.1-alpha-0.11.4
+          name: eclipse-grimoire-forge-1.20.1-alpha-0.11.5
           path: eclipse_grimoire_safe_build/build/libs/*.jar
           if-no-files-found: error
