@@ -42,6 +42,24 @@ jobs:
           test -s "$archive" || { echo "Missing Alpha 0.11.0 ZIP in repository root" >&2; exit 1; }
           unzip -tq "$archive"
           unzip -o -q "$archive" -d .
+          # Forge 1.20.1 CustomRecipe constructors require ID + category.
+          # Patch the two constructors in the uploaded 0.11.0 archive before building.
+          python3 - <<'PYFIX'
+          from pathlib import Path
+          root = Path('src/main/java/io/github/eclipsegrimoire')
+          for name in ('BloodPoppetRecipe', 'WardPoppetRecipe'):
+              p = root / (name + '.java')
+              original = p.read_text(encoding='utf-8')
+              old = f'public {name}(CraftingBookCategory category){{super(category);}}'
+              new = f'public {name}(net.minecraft.resources.ResourceLocation id, CraftingBookCategory category){{super(id,category);}}'
+              if old not in original:
+                  if new in original:
+                      print(name, 'already fixed')
+                      continue
+                  raise SystemExit(f'Cannot locate {name} constructor; refusing unsafe patch')
+              p.write_text(original.replace(old, new, 1), encoding='utf-8')
+              print('Fixed', name, 'for Forge 1.20.1')
+          PYFIX
           grep -Fxq 'mod_version=0.11.0-alpha' gradle.properties || { echo 'Wrong version' >&2; exit 1; }
           for source in EclipseMod BloodRelicsData BloodChaliceBlock ScryingCrystalBlock ScryingMagic BloodImmortality TaglockItem PoppetItem BloodPoppetRecipe WardPoppetRecipe PoppetShelfBlock RitualPinItem RitualMagic HexMagic RuneMagic CovenData; do
             test -s "src/main/java/io/github/eclipsegrimoire/${source}.java" || { echo "Missing ${source}" >&2; exit 1; }
