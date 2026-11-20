@@ -35,21 +35,26 @@ jobs:
           cp "$RUNNER_TEMP/forge-mdk/gradlew" .
           chmod +x gradlew
 
-      - name: Apply and verify Alpha 0.11.1 True Scrying source
+      - name: Apply and verify Alpha 0.11.2 Scrying Registry and Familiar Release source
         run: |
           set -euo pipefail
-          archive="../The_Eclipse_Grimoire_GitHub_Update_0.11.1.zip"
-          test -s "$archive" || { echo "Missing Alpha 0.11.1 update ZIP in repository root" >&2; exit 1; }
+          archive="../The_Eclipse_Grimoire_GitHub_Update_0.11.2.zip"
+          test -s "$archive" || { echo "Missing Alpha 0.11.2 update ZIP in repository root" >&2; exit 1; }
           unzip -tq "$archive"
           unzip -o -q "$archive" -d .
-          grep -Fxq 'mod_version=0.11.1-alpha' gradle.properties || { echo 'Wrong version: refusing stale build' >&2; exit 1; }
-          for source in EclipseMod EclipseNetwork ScryingMagic ScryingCrystalBlock BloodRelicsData BloodImmortality BloodPoppetRecipe WardPoppetRecipe; do
+          grep -Fxq 'mod_version=0.11.2-alpha' gradle.properties || { echo 'Wrong version: refusing stale build' >&2; exit 1; }
+          for source in EclipseMod EclipseNetwork ScryingMagic ScryingCrystalBlock BloodRelicsData BloodImmortality BloodPoppetRecipe WardPoppetRecipe MagicData EclipseCommands EclipseEvents; do
             test -s "src/main/java/io/github/eclipsegrimoire/${source}.java" || { echo "Missing ${source}" >&2; exit 1; }
           done
-          for source in ScryingScreen ClientEvents GrimoireScreen; do
+          for source in ScryingScreen ScryRegistryScreen ClientEvents GrimoireScreen; do
             test -s "src/main/java/io/github/eclipsegrimoire/client/${source}.java" || { echo "Missing client ${source}" >&2; exit 1; }
           done
           grep -Fq 'new ScryTarget(' src/main/java/io/github/eclipsegrimoire/EclipseNetwork.java
+          grep -Fq 'new ScryRegistry(' src/main/java/io/github/eclipsegrimoire/EclipseNetwork.java
+          grep -Fq 'forgetDeadCreature' src/main/java/io/github/eclipsegrimoire/EclipseEvents.java
+          grep -Fq 'castAwayFamiliar' src/main/java/io/github/eclipsegrimoire/MagicData.java
+          grep -Fq 'pendingRemoval' src/main/java/io/github/eclipsegrimoire/client/ScryRegistryScreen.java
+          grep -Fq 'Confirm' src/main/java/io/github/eclipsegrimoire/client/ScryRegistryScreen.java
           grep -Fq 'mc.setCameraEntity(target)' src/main/java/io/github/eclipsegrimoire/client/ScryingScreen.java
           grep -Fq 'mc.setCameraEntity(mc.player)' src/main/java/io/github/eclipsegrimoire/client/ScryingScreen.java
           grep -Fq 'super(id,category)' src/main/java/io/github/eclipsegrimoire/BloodPoppetRecipe.java
@@ -63,14 +68,14 @@ jobs:
           for f in assets:json.loads(f.read_text())
           print('Validated',len(assets),'JSON resources')
           PYVALID
-          echo 'True Scrying sources, recipe fixes and resources verified.'
+          echo 'Scrying Registry and Familiar Release sources, recipe fixes and resources verified.'
 
-      - name: Compile Alpha 0.11.1 Forge mod
+      - name: Compile Alpha 0.11.2 Forge mod
         run: ./gradlew --no-daemon build
 
-      - name: Upload compiled Alpha 0.11.1 JAR
+      - name: Upload compiled Alpha 0.11.2 JAR
         uses: actions/upload-artifact@v4
         with:
-          name: eclipse-grimoire-forge-1.20.1-alpha-0.11.1
+          name: eclipse-grimoire-forge-1.20.1-alpha-0.11.2
           path: eclipse_grimoire_safe_build/build/libs/*.jar
           if-no-files-found: error
