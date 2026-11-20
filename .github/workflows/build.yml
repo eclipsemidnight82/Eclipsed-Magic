@@ -35,64 +35,42 @@ jobs:
           cp "$RUNNER_TEMP/forge-mdk/gradlew" .
           chmod +x gradlew
 
-      - name: Apply and verify Alpha 0.11.0 Bloodbound Relics source
+      - name: Apply and verify Alpha 0.11.1 True Scrying source
         run: |
           set -euo pipefail
-          archive="../The_Eclipse_Grimoire_GitHub_Update_0.11.0.zip"
-          test -s "$archive" || { echo "Missing Alpha 0.11.0 ZIP in repository root" >&2; exit 1; }
+          archive="../The_Eclipse_Grimoire_GitHub_Update_0.11.1.zip"
+          test -s "$archive" || { echo "Missing Alpha 0.11.1 update ZIP in repository root" >&2; exit 1; }
           unzip -tq "$archive"
           unzip -o -q "$archive" -d .
-          # Forge 1.20.1 CustomRecipe constructors require ID + category.
-          # Patch the two constructors in the uploaded 0.11.0 archive before building.
-          python3 - <<'PYFIX'
-          from pathlib import Path
-          root = Path('src/main/java/io/github/eclipsegrimoire')
-          for name in ('BloodPoppetRecipe', 'WardPoppetRecipe'):
-              p = root / (name + '.java')
-              original = p.read_text(encoding='utf-8')
-              old = f'public {name}(CraftingBookCategory category){{super(category);}}'
-              new = f'public {name}(net.minecraft.resources.ResourceLocation id, CraftingBookCategory category){{super(id,category);}}'
-              if old not in original:
-                  if new in original:
-                      print(name, 'already fixed')
-                      continue
-                  raise SystemExit(f'Cannot locate {name} constructor; refusing unsafe patch')
-              p.write_text(original.replace(old, new, 1), encoding='utf-8')
-              print('Fixed', name, 'for Forge 1.20.1')
-          PYFIX
-          grep -Fxq 'mod_version=0.11.0-alpha' gradle.properties || { echo 'Wrong version' >&2; exit 1; }
-          for source in EclipseMod BloodRelicsData BloodChaliceBlock ScryingCrystalBlock ScryingMagic BloodImmortality TaglockItem PoppetItem BloodPoppetRecipe WardPoppetRecipe PoppetShelfBlock RitualPinItem RitualMagic HexMagic RuneMagic CovenData; do
+          grep -Fxq 'mod_version=0.11.1-alpha' gradle.properties || { echo 'Wrong version: refusing stale build' >&2; exit 1; }
+          for source in EclipseMod EclipseNetwork ScryingMagic ScryingCrystalBlock BloodRelicsData BloodImmortality BloodPoppetRecipe WardPoppetRecipe; do
             test -s "src/main/java/io/github/eclipsegrimoire/${source}.java" || { echo "Missing ${source}" >&2; exit 1; }
           done
-          for source in GrimoireScreen ScryingScreen BloodTaglockModel SpellWheel; do
-            test -s "src/main/java/io/github/eclipsegrimoire/client/${source}.java" || { echo "Missing ${source}" >&2; exit 1; }
+          for source in ScryingScreen ClientEvents GrimoireScreen; do
+            test -s "src/main/java/io/github/eclipsegrimoire/client/${source}.java" || { echo "Missing client ${source}" >&2; exit 1; }
           done
-          grep -Fq 'Chapter.RELICS' src/main/java/io/github/eclipsegrimoire/client/GrimoireScreen.java
-          grep -Fq 'BLOOD_CHALICE_BLOCK' src/main/java/io/github/eclipsegrimoire/EclipseMod.java
-          grep -Fq 'BLOOD_POPPET_RECIPE' src/main/java/io/github/eclipsegrimoire/EclipseMod.java
-          test -s src/main/resources/assets/eclipse_grimoire/textures/item/blood_taglock.png
-          test -s src/main/resources/assets/eclipse_grimoire/models/block/blood_chalice_blood.json
-          test -s src/main/resources/assets/eclipse_grimoire/models/item/blood_taglock.json
-          test -s src/main/resources/data/eclipse_grimoire/recipes/blood_poppet.json
-          test -s src/main/resources/data/eclipse_grimoire/recipes/ward_poppet.json
-          for removed in BroomConfig BroomEntity BroomItem; do
-            test ! -f "src/main/java/io/github/eclipsegrimoire/${removed}.java" || { echo 'Retired broom source found' >&2; exit 1; }
-          done
-          python3 - <<'PY'
-          import pathlib,json
-          path=pathlib.Path('src/main/resources')
-          items=list(path.rglob('*.json'))
-          for p in items:json.loads(p.read_text())
-          print('Verified',len(items),'JSON assets')
-          PY
-          echo 'Alpha 0.11.0 bloodbound source and assets verified.'
+          grep -Fq 'new ScryTarget(' src/main/java/io/github/eclipsegrimoire/EclipseNetwork.java
+          grep -Fq 'mc.setCameraEntity(target)' src/main/java/io/github/eclipsegrimoire/client/ScryingScreen.java
+          grep -Fq 'mc.setCameraEntity(mc.player)' src/main/java/io/github/eclipsegrimoire/client/ScryingScreen.java
+          grep -Fq 'super(id,category)' src/main/java/io/github/eclipsegrimoire/BloodPoppetRecipe.java
+          grep -Fq 'super(id,category)' src/main/java/io/github/eclipsegrimoire/WardPoppetRecipe.java
+          if grep -Fq 'LIVE ARCANE OVERHEAD VISION' src/main/java/io/github/eclipsegrimoire/client/ScryingScreen.java; then
+            echo 'Refusing to build old overhead scry UI' >&2; exit 1
+          fi
+          python3 - <<'PYVALID'
+          import json,pathlib
+          assets=list(pathlib.Path('src/main/resources').rglob('*.json'))
+          for f in assets:json.loads(f.read_text())
+          print('Validated',len(assets),'JSON resources')
+          PYVALID
+          echo 'True Scrying sources, recipe fixes and resources verified.'
 
-      - name: Compile Alpha 0.11.0 Forge mod
+      - name: Compile Alpha 0.11.1 Forge mod
         run: ./gradlew --no-daemon build
 
-      - name: Upload compiled Alpha 0.11.0 JAR
+      - name: Upload compiled Alpha 0.11.1 JAR
         uses: actions/upload-artifact@v4
         with:
-          name: eclipse-grimoire-forge-1.20.1-alpha-0.11.0
+          name: eclipse-grimoire-forge-1.20.1-alpha-0.11.1
           path: eclipse_grimoire_safe_build/build/libs/*.jar
           if-no-files-found: error
