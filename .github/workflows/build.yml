@@ -35,47 +35,52 @@ jobs:
           cp "$RUNNER_TEMP/forge-mdk/gradlew" .
           chmod +x gradlew
 
-      - name: Apply and verify Alpha 0.11.2 Scrying Registry and Familiar Release source
+      - name: Apply and verify Alpha 0.11.3 Arcane Aesthetic source
         run: |
           set -euo pipefail
-          archive="../The_Eclipse_Grimoire_GitHub_Update_0.11.2.zip"
-          test -s "$archive" || { echo "Missing Alpha 0.11.2 update ZIP in repository root" >&2; exit 1; }
+          archive="../The_Eclipse_Grimoire_GitHub_Update_0.11.3.zip"
+          test -s "$archive" || { echo 'Missing Alpha 0.11.3 source ZIP in repository root' >&2; exit 1; }
           unzip -tq "$archive"
           unzip -o -q "$archive" -d .
-          grep -Fxq 'mod_version=0.11.2-alpha' gradle.properties || { echo 'Wrong version: refusing stale build' >&2; exit 1; }
-          for source in EclipseMod EclipseNetwork ScryingMagic ScryingCrystalBlock BloodRelicsData BloodImmortality BloodPoppetRecipe WardPoppetRecipe MagicData EclipseCommands EclipseEvents; do
+          grep -Fxq 'mod_version=0.11.3-alpha' gradle.properties || { echo 'Wrong version: refusing stale build' >&2; exit 1; }
+          for source in EclipseMod EclipseNetwork ScryingMagic ScryingCrystalBlock BloodChaliceBlock BloodRelicsData BloodImmortality BloodPoppetRecipe WardPoppetRecipe TaglockItem PoppetItem MagicData EclipseCommands; do
             test -s "src/main/java/io/github/eclipsegrimoire/${source}.java" || { echo "Missing ${source}" >&2; exit 1; }
           done
-          for source in ScryingScreen ScryRegistryScreen ClientEvents GrimoireScreen; do
+          for source in ScryingScreen ScryRegistryScreen GrimoireScreen BloodTaglockModel; do
             test -s "src/main/java/io/github/eclipsegrimoire/client/${source}.java" || { echo "Missing client ${source}" >&2; exit 1; }
           done
-          grep -Fq 'new ScryTarget(' src/main/java/io/github/eclipsegrimoire/EclipseNetwork.java
-          grep -Fq 'new ScryRegistry(' src/main/java/io/github/eclipsegrimoire/EclipseNetwork.java
-          grep -Fq 'forgetDeadCreature' src/main/java/io/github/eclipsegrimoire/EclipseEvents.java
-          grep -Fq 'castAwayFamiliar' src/main/java/io/github/eclipsegrimoire/MagicData.java
-          grep -Fq 'pendingRemoval' src/main/java/io/github/eclipsegrimoire/client/ScryRegistryScreen.java
-          grep -Fq 'Confirm' src/main/java/io/github/eclipsegrimoire/client/ScryRegistryScreen.java
-          grep -Fq 'mc.setCameraEntity(target)' src/main/java/io/github/eclipsegrimoire/client/ScryingScreen.java
-          grep -Fq 'mc.setCameraEntity(mc.player)' src/main/java/io/github/eclipsegrimoire/client/ScryingScreen.java
+          grep -Fq 'poppet_state' src/main/java/io/github/eclipsegrimoire/client/BloodTaglockModel.java
           grep -Fq 'super(id,category)' src/main/java/io/github/eclipsegrimoire/BloodPoppetRecipe.java
           grep -Fq 'super(id,category)' src/main/java/io/github/eclipsegrimoire/WardPoppetRecipe.java
-          if grep -Fq 'LIVE ARCANE OVERHEAD VISION' src/main/java/io/github/eclipsegrimoire/client/ScryingScreen.java; then
-            echo 'Refusing to build old overhead scry UI' >&2; exit 1
-          fi
+          test -s src/main/resources/assets/eclipse_grimoire/textures/item/blood_taglock_blood.png
+          test -s src/main/resources/assets/eclipse_grimoire/textures/item/poppet_protected.png
+          test -s src/main/resources/assets/eclipse_grimoire/models/block/blood_chalice_blood.json
+          test -s src/main/resources/assets/eclipse_grimoire/models/block/scrying_crystal_bound.json
           python3 - <<'PYVALID'
-          import json,pathlib
-          assets=list(pathlib.Path('src/main/resources').rglob('*.json'))
-          for f in assets:json.loads(f.read_text())
-          print('Validated',len(assets),'JSON resources')
+          import pathlib,json
+          root=pathlib.Path('src/main/resources')
+          files=list(root.rglob('*.json'))
+          for path in files: json.loads(path.read_text())
+          assets=root/'assets/eclipse_grimoire'
+          for name in ('scrying_crystal_empty','scrying_crystal_bound'):
+              model=json.loads((assets/'models/block'/f'{name}.json').read_text())
+              assert model.get('render_type')=='minecraft:translucent'
+          for name in ('blood_chalice_empty','blood_chalice_blood'):
+              model=json.loads((assets/'models/block'/f'{name}.json').read_text())
+              assert len(model.get('elements',[]))>=15
+          for name in ('blood_taglock','poppet'):
+              model=json.loads((assets/'models/item'/f'{name}.json').read_text())
+              assert model.get('overrides')
+          print('Validated',len(files),'JSON resources, translucent crystal, filled chalice, dynamic icon models')
           PYVALID
-          echo 'Scrying Registry and Familiar Release sources, recipe fixes and resources verified.'
+          echo 'Alpha 0.11.3 Arcane Aesthetic sources and resources verified.'
 
-      - name: Compile Alpha 0.11.2 Forge mod
+      - name: Compile Alpha 0.11.3 Forge mod
         run: ./gradlew --no-daemon build
 
-      - name: Upload compiled Alpha 0.11.2 JAR
+      - name: Upload compiled Alpha 0.11.3 JAR
         uses: actions/upload-artifact@v4
         with:
-          name: eclipse-grimoire-forge-1.20.1-alpha-0.11.2
+          name: eclipse-grimoire-forge-1.20.1-alpha-0.11.3
           path: eclipse_grimoire_safe_build/build/libs/*.jar
           if-no-files-found: error
