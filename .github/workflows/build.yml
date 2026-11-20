@@ -35,14 +35,14 @@ jobs:
           cp "$RUNNER_TEMP/forge-mdk/gradlew" .
           chmod +x gradlew
 
-      - name: Apply and verify Alpha 0.11.3 Arcane Aesthetic source
+      - name: Apply and verify Alpha 0.11.4 Visual Consistency source
         run: |
           set -euo pipefail
-          archive="../The_Eclipse_Grimoire_GitHub_Update_0.11.3_FIXED.zip"
-          test -s "$archive" || { echo 'Missing Alpha 0.11.3 source ZIP in repository root' >&2; exit 1; }
+          archive="../The_Eclipse_Grimoire_GitHub_Update_0.11.4.zip"
+          test -s "$archive" || { echo 'Missing Alpha 0.11.4 source ZIP in repository root' >&2; exit 1; }
           unzip -tq "$archive"
           unzip -o -q "$archive" -d .
-          grep -Fxq 'mod_version=0.11.3-alpha' gradle.properties || { echo 'Wrong version: refusing stale build' >&2; exit 1; }
+          grep -Fxq 'mod_version=0.11.4-alpha' gradle.properties || { echo 'Wrong version: refusing stale build' >&2; exit 1; }
           for source in EclipseMod EclipseNetwork ScryingMagic ScryingCrystalBlock BloodChaliceBlock BloodRelicsData BloodImmortality BloodPoppetRecipe WardPoppetRecipe TaglockItem PoppetItem MagicData EclipseCommands; do
             test -s "src/main/java/io/github/eclipsegrimoire/${source}.java" || { echo "Missing ${source}" >&2; exit 1; }
           done
@@ -74,14 +74,31 @@ jobs:
               assert model.get('overrides')
           print('Validated',len(files),'JSON resources, translucent crystal, filled chalice, dynamic icon models')
           PYVALID
-          echo 'Alpha 0.11.3 Arcane Aesthetic sources and resources verified.'
+          python3 - <<'PYVISUAL'
+          import json,pathlib,struct
+          base=pathlib.Path('src/main/resources/assets/eclipse_grimoire')
+          model=json.loads((base/'models/block/witch_bell.json').read_text())
+          assert model['textures']['particle']=='#frame', 'Bell texture must be a valid reference'
+          for ref in ('frame','bell','gem'):
+              name=model['textures'][ref].split(':',1)[1]
+              assert (base/'textures'/f'{name}.png').is_file(),f'Missing bell texture: {name}'
+          item=json.loads((base/'models/item/witch_bell.json').read_text())
+          assert item['parent']=='eclipse_grimoire:block/witch_bell'
+          empty=(base/'textures/item/blood_taglock.png').read_bytes()
+          blood=(base/'textures/item/blood_taglock_blood.png').read_bytes()
+          assert empty!=blood and empty.startswith(b'\x89PNG') and blood.startswith(b'\x89PNG')
+          assert empty[16:24]==blood[16:24], 'Taglock images must share pixel dimensions'
+          print('Verified bell texture references and consistent taglock artwork')
+          PYVISUAL
 
-      - name: Compile Alpha 0.11.3 Forge mod
+          echo 'Alpha 0.11.4 Visual Consistency sources and resources verified.'
+
+      - name: Compile Alpha 0.11.4 Forge mod
         run: ./gradlew --no-daemon build
 
-      - name: Upload compiled Alpha 0.11.3 JAR
+      - name: Upload compiled Alpha 0.11.4 JAR
         uses: actions/upload-artifact@v4
         with:
-          name: eclipse-grimoire-forge-1.20.1-alpha-0.11.3
+          name: eclipse-grimoire-forge-1.20.1-alpha-0.11.4
           path: eclipse_grimoire_safe_build/build/libs/*.jar
           if-no-files-found: error
