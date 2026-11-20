@@ -34,30 +34,33 @@ jobs:
           cp "$RUNNER_TEMP/forge-mdk/gradlew" .
           chmod +x gradlew
 
-      - name: Apply and verify Alpha 0.6.0 update ZIP
+      - name: Apply Alpha 0.7.0 ZIP and check version and source layout
         run: |
           set -euo pipefail
-          zip_file="../The_Eclipse_Grimoire_GitHub_Update_0.6.0.zip"
-          test -f "$zip_file" || { echo "Missing 0.6.0 ZIP at repository root: $zip_file" >&2; exit 1; }
-          unzip -o -q "$zip_file" -d .
-          grep -q '^mod_version=0.6.0-alpha$' gradle.properties
-          test -f src/main/java/io/github/eclipsegrimoire/MotionMagic.java
-          test -f src/main/java/io/github/eclipsegrimoire/ArcaneEffects.java
-          test -f src/main/java/io/github/eclipsegrimoire/client/WheelPreferences.java
-          grep -Fq 'MotionMagic.cast(player,spell)' src/main/java/io/github/eclipsegrimoire/SpellCasting.java
-          # MagicData groups spells with the same required level in one case arm.
-          grep -Fq '"pulse"' src/main/java/io/github/eclipsegrimoire/MagicData.java
-          grep -Fq 'RESET WHEEL TO DEFAULT' src/main/java/io/github/eclipsegrimoire/client/GrimoireScreen.java
-          grep -Fq 'new Entry("witchfire"' src/main/java/io/github/eclipsegrimoire/client/SpellWheel.java
-          test -f src/main/resources/assets/eclipse_grimoire/textures/block/infused_salt_purple.png
-          echo "Verified: compiling Alpha 0.6.0 magic, wheel preferences and color-themed book."
+          archive="../The_Eclipse_Grimoire_GitHub_Update_0.7.0.zip"
+          if [[ ! -f "$archive" ]]; then
+            echo "ERROR: Upload The_Eclipse_Grimoire_GitHub_Update_0.7.0.zip to the repository root." >&2
+            exit 1
+          fi
+          unzip -tq "$archive"
+          unzip -o -q "$archive" -d .
+          if ! grep -Fxq 'mod_version=0.7.0-alpha' gradle.properties; then
+            echo 'ERROR: Alpha 0.7.0 version was not applied.' >&2; exit 1
+          fi
+          for source in MagicData.java SpellCasting.java ArcaneEffects.java EclipseCommands.java; do
+            test -s "src/main/java/io/github/eclipsegrimoire/$source" || { echo "Missing $source" >&2; exit 1; }
+          done
+          test -s src/main/java/io/github/eclipsegrimoire/client/GrimoireScreen.java
+          test -s src/main/java/io/github/eclipsegrimoire/client/SpellWheel.java
+          test -s src/main/resources/assets/eclipse_grimoire/textures/block/infused_salt_purple.png
+          echo 'Alpha 0.7.0 source and assets are ready to compile.'
 
-      - name: Compile Alpha 0.6.0 Forge mod
+      - name: Compile Alpha 0.7.0 Forge mod
         run: ./gradlew --no-daemon build
 
       - name: Upload compiled mod (only on success)
         uses: actions/upload-artifact@v4
         with:
-          name: eclipse-grimoire-forge-1.20.1-alpha-0.6.0
+          name: eclipse-grimoire-forge-1.20.1-alpha-0.7.0
           path: eclipse_grimoire_safe_build/build/libs/*.jar
           if-no-files-found: error
