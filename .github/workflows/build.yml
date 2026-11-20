@@ -54,6 +54,22 @@ jobs:
           test -s src/main/resources/assets/eclipse_grimoire/textures/block/infused_salt_purple.png
           echo 'Alpha 0.7.1 source, door seals, visuals and compact spell wheel found.'
 
+      - name: Fix Forge 1.20.1 lightning vertex API
+        run: |
+          set -euo pipefail
+          python3 - <<'PYFIX'
+          from pathlib import Path
+          file = Path('src/main/java/io/github/eclipsegrimoire/client/ArcaneRender.java')
+          text = file.read_text(encoding='utf-8')
+          old = 'v.vertex(matrix,(float)p.x,(float)p.y,(float)p.z)'
+          new = 'v.vertex(matrix.pose(),(float)p.x,(float)p.y,(float)p.z)'
+          if text.count(old) != 1:
+              raise SystemExit('Expected exactly one pre-fix vertex call; inspect ArcaneRender.java')
+          file.write_text(text.replace(old, new), encoding='utf-8')
+          print('Corrected ArcaneRender.java: PoseStack.Pose -> Matrix4f')
+          PYFIX
+          grep -Fq 'v.vertex(matrix.pose(),(float)p.x,(float)p.y,(float)p.z)' src/main/java/io/github/eclipsegrimoire/client/ArcaneRender.java
+
       - name: Compile Alpha 0.7.1 Forge mod
         run: ./gradlew --no-daemon build
 
