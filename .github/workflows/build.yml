@@ -35,40 +35,45 @@ jobs:
           cp "$RUNNER_TEMP/forge-mdk/gradlew" .
           chmod +x gradlew
 
-      - name: Apply Alpha 0.9.0 source update
+      - name: Apply and verify Alpha 0.10.0 update ZIP
         run: |
           set -euo pipefail
-          archive="../The_Eclipse_Grimoire_GitHub_Update_0.9.0.zip"
+          archive="../The_Eclipse_Grimoire_GitHub_Update_0.10.0.zip"
           if [[ ! -s "$archive" ]]; then
-            echo "Missing Alpha 0.9.0 ZIP at repository root: $archive" >&2
+            echo "Missing Alpha 0.10.0 ZIP in repository root: $archive" >&2
             exit 1
           fi
           unzip -tq "$archive"
           unzip -o -q "$archive" -d .
-          grep -Fxq 'mod_version=0.9.0-alpha' gradle.properties || {
-            echo 'Refusing to build older or incorrect sources' >&2
-            exit 1
-          }
-          for source in EclipseMod BroomEntity BroomItem BroomConfig RuneMagic RunePattern RuneBlock WitchChalkItem MagicData SpellCasting EclipseNetwork; do
+          grep -Fxq 'mod_version=0.10.0-alpha' gradle.properties || { echo 'Refusing to compile an older release' >&2; exit 1; }
+          for source in EclipseMod SpellCasting EclipseNetwork HexMagic RitualMagic TaglockItem PoppetItem RitualPinItem CurseBottleItem GrisGrisItem MagicData RuneMagic WardData CovenData; do
             test -s "src/main/java/io/github/eclipsegrimoire/${source}.java" || { echo "Missing $source" >&2; exit 1; }
           done
-          for source in BroomClient BroomRenderer GrimoireScreen SpellWheel; do
+          for source in GrimoireScreen SpellWheel WheelPreferences; do
             test -s "src/main/java/io/github/eclipsegrimoire/client/${source}.java" || { echo "Missing $source" >&2; exit 1; }
           done
-          test -s src/main/resources/assets/eclipse_grimoire/textures/item/enchanted_broom.png
-          test -s src/main/resources/assets/eclipse_grimoire/textures/block/chalk_rune_purple_binding.png
-          test -s src/main/resources/assets/eclipse_grimoire/blockstates/chalk_rune_purple.json
-          test -s src/main/resources/data/eclipse_grimoire/recipes/enchanted_broom.json
-          grep -Fq 'rune_bind' src/main/java/io/github/eclipsegrimoire/SpellCasting.java
-          grep -Fq 'registerEntityRenderer' src/main/java/io/github/eclipsegrimoire/client/BroomClient.java
-          echo 'Confirmed: Alpha 0.9.0 Broom Flight and Runecraft sources applied.'
+          # Never silently ship the retired broom on a supposedly clean new build.
+          for removed in BroomConfig BroomEntity BroomItem; do
+            test ! -f "src/main/java/io/github/eclipsegrimoire/${removed}.java" || { echo "Stale $removed still present" >&2; exit 1; }
+          done
+          test ! -f src/main/java/io/github/eclipsegrimoire/client/BroomClient.java
+          test ! -f src/main/java/io/github/eclipsegrimoire/client/BroomRenderer.java
+          if grep -Eq 'BroomEntity|BroomConfig|BROOM_ENTITY|BROOM_ITEM' src/main/java/io/github/eclipsegrimoire/{EclipseMod,EclipseNetwork,MagicData,EclipseCommands}.java; then
+            echo 'Broom references remain in current version' >&2
+            exit 1
+          fi
+          for item in poppet taglock curse_bottle gris_gris_charm ritual_pin_black ritual_pin_blue ritual_pin_violet ritual_pin_silver; do
+            test -s "src/main/resources/assets/eclipse_grimoire/textures/item/${item}.png"
+            test -s "src/main/resources/data/eclipse_grimoire/recipes/${item}.json"
+          done
+          echo 'Confirmed: Alpha 0.10.0 ritual and poppet files applied, brooms removed.'
 
-      - name: Compile Alpha 0.9.0 Forge mod
+      - name: Compile Alpha 0.10.0 Forge mod
         run: ./gradlew --no-daemon build
 
-      - name: Upload compiled Alpha 0.9.0 mod
+      - name: Upload compiled Alpha 0.10.0 mod
         uses: actions/upload-artifact@v4
         with:
-          name: eclipse-grimoire-forge-1.20.1-alpha-0.9.0
+          name: eclipse-grimoire-forge-1.20.1-alpha-0.10.0
           path: eclipse_grimoire_safe_build/build/libs/*.jar
           if-no-files-found: error
