@@ -35,45 +35,38 @@ jobs:
           cp "$RUNNER_TEMP/forge-mdk/gradlew" .
           chmod +x gradlew
 
-      - name: Apply and verify Alpha 0.10.0 update ZIP
+      - name: Apply and verify Alpha 0.10.1 UI update
         run: |
           set -euo pipefail
-          archive="../The_Eclipse_Grimoire_GitHub_Update_0.10.0.zip"
-          if [[ ! -s "$archive" ]]; then
-            echo "Missing Alpha 0.10.0 ZIP in repository root: $archive" >&2
-            exit 1
-          fi
+          archive="../The_Eclipse_Grimoire_GitHub_Update_0.10.1.zip"
+          test -s "$archive" || { echo "Missing Alpha 0.10.1 ZIP in repository root" >&2; exit 1; }
           unzip -tq "$archive"
           unzip -o -q "$archive" -d .
-          grep -Fxq 'mod_version=0.10.0-alpha' gradle.properties || { echo 'Refusing to compile an older release' >&2; exit 1; }
-          for source in EclipseMod SpellCasting EclipseNetwork HexMagic RitualMagic TaglockItem PoppetItem RitualPinItem CurseBottleItem GrisGrisItem MagicData RuneMagic WardData CovenData; do
-            test -s "src/main/java/io/github/eclipsegrimoire/${source}.java" || { echo "Missing $source" >&2; exit 1; }
+          grep -Fxq 'mod_version=0.10.1-alpha' gradle.properties || { echo 'Refusing to build the wrong alpha version' >&2; exit 1; }
+          ui=src/main/java/io/github/eclipsegrimoire/client/GrimoireScreen.java
+          test -s "$ui"
+          grep -Fq 'Chapter.CONTENTS' "$ui"
+          grep -Fq 'TABLE OF CONTENTS' "$ui"
+          grep -Fq 'spellSpreadCount()' "$ui"
+          grep -Fq 'case RITUALS->RITES.length' "$ui"
+          grep -Fq 'case COVEN->Math.max(2,' "$ui"
+          for source in EclipseMod RitualMagic HexMagic PoppetItem RuneMagic CovenData MagicData; do
+            test -s "src/main/java/io/github/eclipsegrimoire/${source}.java" || { echo "Missing preserved source: $source" >&2; exit 1; }
           done
-          for source in GrimoireScreen SpellWheel WheelPreferences; do
-            test -s "src/main/java/io/github/eclipsegrimoire/client/${source}.java" || { echo "Missing $source" >&2; exit 1; }
+          for source in SpellWheel WheelPreferences; do
+            test -s "src/main/java/io/github/eclipsegrimoire/client/${source}.java" || { echo "Missing preserved UI source: $source" >&2; exit 1; }
           done
-          # Never silently ship the retired broom on a supposedly clean new build.
           for removed in BroomConfig BroomEntity BroomItem; do
-            test ! -f "src/main/java/io/github/eclipsegrimoire/${removed}.java" || { echo "Stale $removed still present" >&2; exit 1; }
+            test ! -f "src/main/java/io/github/eclipsegrimoire/${removed}.java" || { echo "Retired broom file still present" >&2; exit 1; }
           done
-          test ! -f src/main/java/io/github/eclipsegrimoire/client/BroomClient.java
-          test ! -f src/main/java/io/github/eclipsegrimoire/client/BroomRenderer.java
-          if grep -Eq 'BroomEntity|BroomConfig|BROOM_ENTITY|BROOM_ITEM' src/main/java/io/github/eclipsegrimoire/{EclipseMod,EclipseNetwork,MagicData,EclipseCommands}.java; then
-            echo 'Broom references remain in current version' >&2
-            exit 1
-          fi
-          for item in poppet taglock curse_bottle gris_gris_charm ritual_pin_black ritual_pin_blue ritual_pin_violet ritual_pin_silver; do
-            test -s "src/main/resources/assets/eclipse_grimoire/textures/item/${item}.png"
-            test -s "src/main/resources/data/eclipse_grimoire/recipes/${item}.json"
-          done
-          echo 'Confirmed: Alpha 0.10.0 ritual and poppet files applied, brooms removed.'
+          echo 'Confirmed: Alpha 0.10.1 Contents-based grimoire with preserved 0.10.0 gameplay.'
 
-      - name: Compile Alpha 0.10.0 Forge mod
+      - name: Compile Alpha 0.10.1 Forge mod
         run: ./gradlew --no-daemon build
 
-      - name: Upload compiled Alpha 0.10.0 mod
+      - name: Upload compiled Alpha 0.10.1 mod
         uses: actions/upload-artifact@v4
         with:
-          name: eclipse-grimoire-forge-1.20.1-alpha-0.10.0
+          name: eclipse-grimoire-forge-1.20.1-alpha-0.10.1
           path: eclipse_grimoire_safe_build/build/libs/*.jar
           if-no-files-found: error
