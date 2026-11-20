@@ -44,7 +44,8 @@ jobs:
           test -f src/main/java/io/github/eclipsegrimoire/client/SpellWheel.java
           test -f src/main/java/io/github/eclipsegrimoire/EclipseNetwork.java
           grep -q 'WheelRequest' src/main/java/io/github/eclipsegrimoire/EclipseNetwork.java
-          grep -q 'infused_salt_purple_line' src/main/java/io/github/eclipsegrimoire/EclipseMod.java
+          # Colored blocks are registered dynamically as infused_salt_<color>_line.
+          grep -Fq 'BLOCKS.register("infused_salt_"+color+"_line"' src/main/java/io/github/eclipsegrimoire/EclipseMod.java
           test -f src/main/resources/assets/eclipse_grimoire/blockstates/infused_salt_purple_line.json
           test -f src/main/resources/assets/eclipse_grimoire/textures/block/infused_salt_purple.png
           echo "Confirmed: building Alpha 0.4.0 with colored salt and spell wheel."
