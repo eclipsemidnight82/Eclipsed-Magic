@@ -45,7 +45,8 @@ jobs:
           test -f src/main/java/io/github/eclipsegrimoire/ArcaneEffects.java
           test -f src/main/java/io/github/eclipsegrimoire/client/WheelPreferences.java
           grep -Fq 'MotionMagic.cast(player,spell)' src/main/java/io/github/eclipsegrimoire/SpellCasting.java
-          grep -Fq 'case "pulse"' src/main/java/io/github/eclipsegrimoire/MagicData.java
+          # MagicData groups spells with the same required level in one case arm.
+          grep -Fq '"pulse"' src/main/java/io/github/eclipsegrimoire/MagicData.java
           grep -Fq 'RESET WHEEL TO DEFAULT' src/main/java/io/github/eclipsegrimoire/client/GrimoireScreen.java
           grep -Fq 'new Entry("witchfire"' src/main/java/io/github/eclipsegrimoire/client/SpellWheel.java
           test -f src/main/resources/assets/eclipse_grimoire/textures/block/infused_salt_purple.png
