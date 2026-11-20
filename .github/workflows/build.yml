@@ -15,7 +15,7 @@ jobs:
       run:
         working-directory: eclipse_grimoire_safe_build
     steps:
-      - name: Check out mod sources
+      - name: Check out source repository
         uses: actions/checkout@v4
 
       - name: Set up Java 17
@@ -34,51 +34,27 @@ jobs:
           cp "$RUNNER_TEMP/forge-mdk/gradlew" .
           chmod +x gradlew
 
-      - name: Apply Alpha 0.3.0 ZIP and correct Forge network API
+      - name: Apply Alpha 0.4.0 source ZIP
         run: |
           set -euo pipefail
-          zip_file="../The_Eclipse_Grimoire_GitHub_Root_Update_0.3.0.zip"
-          if [[ ! -f "$zip_file" ]]; then
-            echo "Missing Alpha 0.3.0 ZIP at repository root: $zip_file" >&2
-            exit 1
-          fi
-          src="$RUNNER_TEMP/eclipse-alpha-0.3.0"
-          mkdir -p "$src"
-          unzip -q "$zip_file" -d "$src"
-          test -f "$src/EclipseMod.java"
-          test -f "$src/EclipseNetwork.java"
-          test -f "$src/ClientBook.java"
-          test -f "$src/SpellCasting.java"
-          test -f "$src/build.gradle"
-          test -f "$src/gradle.properties"
-          for java_file in "$src"/*.java; do
-            name="${java_file##*/}"
-            case "$name" in
-              ClientEvents.java|GrimoireScreen.java|ClientBook.java)
-                cp -v "$java_file" "src/main/java/io/github/eclipsegrimoire/client/$name" ;;
-              *)
-                cp -v "$java_file" "src/main/java/io/github/eclipsegrimoire/$name" ;;
-            esac
-          done
-          # Forge 47.4.0 expects a Supplier<ServerPlayer> for PLAYER.with(...).
-          network="src/main/java/io/github/eclipsegrimoire/EclipseNetwork.java"
-          sed -i 's/PacketDistributor\.PLAYER\.with(player)/PacketDistributor.PLAYER.with(() -> player)/' "$network"
-          grep -Fq 'PacketDistributor.PLAYER.with(() -> player)' "$network"
-          cp "$src/build.gradle" ./build.gradle
-          cp "$src/gradle.properties" ./gradle.properties
-          grep -q '^mod_version=0.3.0-alpha$' gradle.properties
-          grep -q 'case "shatter"' src/main/java/io/github/eclipsegrimoire/SpellCasting.java
-          grep -q 'EclipseNetwork' src/main/java/io/github/eclipsegrimoire/EclipseMod.java
+          zip_file="../The_Eclipse_Grimoire_GitHub_Update_0.4.0.zip"
+          test -f "$zip_file" || { echo "Upload the 0.4.0 ZIP to repository root first."; exit 1; }
+          unzip -o -q "$zip_file" -d .
+          grep -q '^mod_version=0.4.0-alpha$' gradle.properties
+          test -f src/main/java/io/github/eclipsegrimoire/client/SpellWheel.java
           test -f src/main/java/io/github/eclipsegrimoire/EclipseNetwork.java
-          test -f src/main/java/io/github/eclipsegrimoire/client/ClientBook.java
-          echo "Confirmed: Alpha 0.3.0 files have replaced old source in Forge build directory."
+          grep -q 'WheelRequest' src/main/java/io/github/eclipsegrimoire/EclipseNetwork.java
+          grep -q 'infused_salt_purple_line' src/main/java/io/github/eclipsegrimoire/EclipseMod.java
+          test -f src/main/resources/assets/eclipse_grimoire/blockstates/infused_salt_purple_line.json
+          test -f src/main/resources/assets/eclipse_grimoire/textures/block/infused_salt_purple.png
+          echo "Confirmed: building Alpha 0.4.0 with colored salt and spell wheel."
 
-      - name: Compile Alpha 0.3.0 Forge mod
+      - name: Compile Alpha 0.4.0 Forge mod
         run: ./gradlew --no-daemon build
 
-      - name: Upload compiled mod (only if build succeeds)
+      - name: Upload compiled mod if build succeeds
         uses: actions/upload-artifact@v4
         with:
-          name: eclipse-grimoire-forge-1.20.1-alpha-0.3.0
+          name: eclipse-grimoire-forge-1.20.1-alpha-0.4.0
           path: eclipse_grimoire_safe_build/build/libs/*.jar
           if-no-files-found: error
