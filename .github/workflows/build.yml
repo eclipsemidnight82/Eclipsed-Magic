@@ -34,28 +34,26 @@ jobs:
           cp "$RUNNER_TEMP/forge-mdk/gradlew" .
           chmod +x gradlew
 
-      - name: Apply Alpha 0.4.0 source ZIP
+      - name: Apply Alpha 0.5.0 source ZIP
         run: |
           set -euo pipefail
-          zip_file="../The_Eclipse_Grimoire_GitHub_Update_0.4.0.zip"
-          test -f "$zip_file" || { echo "Upload the 0.4.0 ZIP to repository root first."; exit 1; }
+          zip_file="../The_Eclipse_Grimoire_GitHub_Update_0.5.0.zip"
+          test -f "$zip_file" || { echo "Missing update ZIP in repository root: $zip_file" >&2; exit 1; }
           unzip -o -q "$zip_file" -d .
-          grep -q '^mod_version=0.4.0-alpha$' gradle.properties
-          test -f src/main/java/io/github/eclipsegrimoire/client/SpellWheel.java
-          test -f src/main/java/io/github/eclipsegrimoire/EclipseNetwork.java
-          grep -q 'WheelRequest' src/main/java/io/github/eclipsegrimoire/EclipseNetwork.java
-          # Colored blocks are registered dynamically as infused_salt_<color>_line.
-          grep -Fq 'BLOCKS.register("infused_salt_"+color+"_line"' src/main/java/io/github/eclipsegrimoire/EclipseMod.java
-          test -f src/main/resources/assets/eclipse_grimoire/blockstates/infused_salt_purple_line.json
+          grep -q '^mod_version=0.5.0-alpha$' gradle.properties
+          test -f src/main/java/io/github/eclipsegrimoire/TetherMagic.java
+          grep -q '"tether".equals(spell)' src/main/java/io/github/eclipsegrimoire/SpellCasting.java
+          grep -q '"tether","Arcane Tether"' src/main/java/io/github/eclipsegrimoire/client/SpellWheel.java
+          grep -q 'class ArcaneButton extends Button' src/main/java/io/github/eclipsegrimoire/client/GrimoireScreen.java
           test -f src/main/resources/assets/eclipse_grimoire/textures/block/infused_salt_purple.png
-          echo "Confirmed: building Alpha 0.4.0 with colored salt and spell wheel."
+          echo "Verified: Alpha 0.5.0 source with styled grimoire and Arcane Tether"
 
-      - name: Compile Alpha 0.4.0 Forge mod
+      - name: Compile Alpha 0.5.0 Forge mod
         run: ./gradlew --no-daemon build
 
       - name: Upload compiled mod if build succeeds
         uses: actions/upload-artifact@v4
         with:
-          name: eclipse-grimoire-forge-1.20.1-alpha-0.4.0
+          name: eclipse-grimoire-forge-1.20.1-alpha-0.5.0
           path: eclipse_grimoire_safe_build/build/libs/*.jar
           if-no-files-found: error
